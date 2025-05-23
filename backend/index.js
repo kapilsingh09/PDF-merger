@@ -27,7 +27,7 @@ app.post('/api/merge', upload.array('files'), async (req, res) => {
     const mergedPdfFile = await mergedPdf.save();
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename=merged.pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename = merged.pdf');
     res.send(Buffer.from(mergedPdfFile));
   } catch (error) {
     console.error('Merge error:', error);
