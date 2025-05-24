@@ -1,4 +1,4 @@
-frontend 
+
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -477,7 +477,7 @@ const PDFMerger = () => {
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
           display:none;
-          // width: 6px;  
+       
         }
         
         `}</style>
@@ -485,6 +485,7 @@ const PDFMerger = () => {
       .custom-scrollbar::-webkit-scrollbar-track {
         background: rgba(0,0,0,0.1);
         border-radius: 10px;
+           // width: 6px;  
       }
       .custom-scrollbar::-webkit-scrollbar-thumb {
         background: linear-gradient(to bottom, #667eea, #764ba2);
