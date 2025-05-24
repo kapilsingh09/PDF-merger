@@ -1,64 +1,25 @@
-import { useState } from 'react';
+frontend 
+import React, { useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  UploadCloud, 
+  FileText, 
+  X, 
+  Trash2, 
+  Sun, 
+  Moon, 
+  Loader, 
+  Download,
+  Check,
+  AlertCircle
+} from 'lucide-react';
 
-function App() {
+const PDFMerger = () => {
   const [files, setFiles] = useState([]);
+  const [darkMode, setDarkMode] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showInstructions, setShowInstructions] = useState(true);
-
-  const handleFileChange = (e) => {
-    const newFiles = Array.from(e.target.files);
-    setFiles((prevFiles) => {
-      const combined = [...prevFiles];
-      newFiles.forEach((newFile) => {
-        if (!combined.some(f => f.name === newFile.name && f.size === newFile.size)) {
-          combined.push(newFile);
-        }
-      });
-      return combined;
-    });
-    e.target.value = '';
-  };
-
-  const removeFile = (index) => {
-    setFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
-  };
-
-  const clearAllFiles = () => {
-    setFiles([]);
-  };
-
-  const handleMerge = async () => {
-    if (files.length < 2) {
-      alert('Please select at least 2 PDF files to merge!');
-      return;
-    }
-
-    const formData = new FormData();
-    for (const file of files) {
-      formData.append('pdfs', file);
-    }
-
-    try {
-      const response = await fetch('http://localhost:5000/api/merge', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to merge PDFs');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'merged.pdf';
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      alert(error.message);
-    }
-  };
+  const [notification, setNotification] = useState(null);
 
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
@@ -70,93 +31,471 @@ function App() {
 
   const totalSize = files.reduce((sum, file) => sum + file.size, 0);
 
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  const handleFileChange = useCallback((e) => {
+    const selectedFiles = Array.from(e.target.files);
+    const pdfFiles = selectedFiles.filter(file => file.type === 'application/pdf');
+    
+    if (pdfFiles.length !== selectedFiles.length) {
+      showNotification('Only PDF files are allowed', 'error');
+    }
+    
+    if (pdfFiles.length > 0) {
+      setFiles(prev => [...prev, ...pdfFiles]);
+      showNotification(`Added ${pdfFiles.length} PDF file${pdfFiles.length > 1 ? 's' : ''}`, 'success');
+    }
+    
+    // Reset input
+    e.target.value = '';
+  }, []);
+
+  const removeFile = useCallback((index) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+    showNotification('File removed', 'info');
+  }, []);
+
+  const clearAllFiles = useCallback(() => {
+    setFiles([]);
+    showNotification('All files cleared', 'info');
+  }, []);
+
+  const toggleDarkMode = useCallback(() => {
+    setDarkMode(prev => !prev);
+  }, []);
+
+  const handleMerge = async () => {
+    if (files.length < 2) return;
+
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      files.forEach((file) => {
+        formData.append('files', file);
+      });
+
+      const response = await fetch('http://localhost:5000/api/merge', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to merge PDFs');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      // Trigger download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'merged.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      showNotification('PDFs merged successfully! Download started.', 'success');
+    } catch (error) {
+      showNotification('Error merging PDFs. Please try again.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        duration: 0.6,
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">PDF Merger</h2>
-
-      <div className="mb-6">
-        <label htmlFor="file-upload" className="cursor-pointer bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition">
-          + Add PDF Files
-        </label>
-        <input id="file-upload" type="file" multiple accept="application/pdf" onChange={handleFileChange} className="hidden" />
-
-        {files.length > 0 && (
-          <button onClick={clearAllFiles} className="ml-4 bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition text-sm">
-            Clear All
-          </button>
-        )}
+    <div className={`min-h-[100vh] transition-all duration-500 ${darkMode ? 'dark' : ''}`}>
+      {/* Animated Background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-pink-200 via-purple-200 via-blue-200 via-cyan-200 to-green-200 dark:from-purple-900 dark:via-blue-900 dark:via-indigo-900 dark:to-slate-900">
+        <div className="absolute inset-0 bg-gradient-to-t from-white/20 to-transparent dark:from-black/20"></div>
       </div>
 
-      <div className="mb-6 p-4 border border-gray-300 rounded-md bg-gray-50 min-h-[120px]">
-        {files.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
-            <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <p>No PDFs selected yet.</p>
-            <p className="text-sm">Click "Add PDF Files" to start selecting files.</p>
-          </div>
-        ) : (
-          <>
-            <div className="flex justify-between items-center mb-3">
-              <p className="font-semibold text-gray-700">{files.length} PDF{files.length > 1 ? 's' : ''} selected</p>
-              <p className="text-sm text-gray-500">Total size: {formatFileSize(totalSize)}</p>
-            </div>
+      {/* Floating Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          animate={{ 
+            x: [0, 100, 0],
+            y: [0, -100, 0],
+            rotate: [0, 180, 360]
+          }}
+          transition={{ 
+            duration: 20,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+          className="absolute top-20 left-20 w-32 h-32 rounded-full bg-gradient-to-r from-pink-300/30 to-purple-300/30 blur-xl"
+        />
+        <motion.div
+          animate={{ 
+            x: [0, -150, 0],
+            y: [0, 100, 0],
+            rotate: [360, 180, 0]
+          }}
+          transition={{ 
+            duration: 25,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+          className="absolute bottom-20 right-20 w-24 h-24 rounded-full bg-gradient-to-r from-blue-300/30 to-cyan-300/30 blur-xl"
+        />
+      </div>
 
-            <div className="max-h-64 overflow-y-auto">
-              {files.map((file, idx) => (
-                <div key={idx} className="flex justify-between items-center py-2 px-3 bg-white rounded border mb-2 hover:bg-gray-50 transition">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-                    <p className="text-xs text-gray-500">{formatFileSize(file.size)} • Added {idx + 1}</p>
+      {/* Notification */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -50, scale: 0.9 }}
+            className="fixed top-4 right-4 z-50 max-w-sm"
+          >
+            <div className={`p-4 rounded-lg shadow-lg backdrop-blur-sm border ${
+              notification.type === 'success' ? 'bg-green-100/90 border-green-300 text-green-800' :
+              notification.type === 'error' ? 'bg-red-100/90 border-red-300 text-red-800' :
+              'bg-blue-100/90 border-blue-300 text-blue-800'
+            }`}>
+              <div className="flex items-center gap-2">
+                {notification.type === 'success' && <Check size={16} />}
+                {notification.type === 'error' && <AlertCircle size={16} />}
+                <span className="text-sm font-medium">{notification.message}</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Content */}
+      <div className="relative z-10 max-w-4xl mx-auto py-8 px-6">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {/* Header */}
+          <motion.div 
+            variants={itemVariants}
+            className="flex justify-between items-center mb-9"
+          >
+            <div>
+              <h1 className="text-5xl font-black bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
+                PDF Merger
+              </h1>
+              <p className="text-gray-600 dark:text-gray-300 text-lg">
+                Combine multiple PDFs into one seamless document
+              </p>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.1, rotate: 180 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={toggleDarkMode}
+              aria-label="Toggle dark mode"
+              className="p-3 rounded-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20"
+            >
+              {darkMode ? (
+                <Sun className="text-yellow-500 w-6 h-6" />
+              ) : (
+                <Moon className="text-indigo-600 w-6 h-6" />
+              )}
+            </motion.button>
+          </motion.div>
+
+          {/* Upload Controls completed checked */}
+          <motion.div 
+            variants={itemVariants}
+            className="mb-4 flex flex-wrap items-center gap-4"
+          >
+            <motion.label
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              htmlFor="file-upload"
+              className="flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-xl backdrop-blur-sm"
+            >
+              <UploadCloud size={20} />
+              <span className="font-semibold">Add PDF Files</span>
+            </motion.label>
+            <input
+              id="file-upload"
+              type="file"
+              multiple
+              accept="application/pdf"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            
+            <AnimatePresence>
+              {files.length > 0 && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={clearAllFiles}
+                  className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-pink-500 text-white px-5 py-3 rounded-xl hover:from-red-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+                >
+                  <Trash2 size={16} />
+                  <span className="font-medium">Clear All</span>
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </motion.div>
+
+          {/* File Display Area */}
+          <motion.div 
+            variants={itemVariants}
+            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/20 p-8 mb-4 min-h-[200px]"
+          >
+            <AnimatePresence mode="wait">
+              {files.length === 0 ? (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="text-center py-12"
+                >
+                  <motion.div
+                    animate={{ 
+                      y: [0, -10, 0],
+                      rotate: [0, 5, -5, 0]
+                    }}
+                    transition={{ 
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <FileText className="mx-auto mb-4 h-16 w-16 text-gray-400 dark:text-gray-500" />
+                  </motion.div>
+                  <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                    No PDFs selected yet
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    Click "Add PDF Files" to start building your merged document
+                  </p>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="files"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  {/* File Stats  completed*/}
+                  <div className="flex justify-between items-center mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-2xl">
+                    <div>
+                      <p className="text-lg font-bold text-gray-800 dark:text-gray-100">
+                        {files.length} PDF{files.length > 1 ? 's' : ''} Ready to Merge
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Total size: {formatFileSize(totalSize)}
+                      </p>
+                    </div>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center"
+                    >
+                      <FileText className="text-white w-6 h-6" />
+                    </motion.div>
                   </div>
-                  <button onClick={() => removeFile(idx)} className="ml-4 text-red-600 hover:text-red-800 hover:bg-red-50 p-1 rounded transition">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+
+                  {/* File List */}
+                  <div className="max-h-80 overflow-y-auto space-y-3 custom-scrollbar">
+                    <AnimatePresence>
+                      {files.map((file, idx) => (
+                        <motion.div
+                          key={`${file.name}-${idx}`}
+                          initial={{ opacity: 0, x: -20, scale: 0.9 }}
+                          animate={{ opacity: 1, x: 0, scale: 1 }}
+                          exit={{ opacity: 0, x: 20, scale: 0.9 }}
+                          whileHover={{ scale: 1.02, y: -2 }}
+                          transition={{ duration: 0.2 }}
+                          className="flex justify-between items-center p-4 bg-white/60 dark:bg-gray-700/60 rounded-2xl shadow-lg hover:shadow-xl backdrop-blur-sm border border-white/30 dark:border-gray-600/30"
+                        >
+                          <div className="flex items-center gap-4 flex-1 min-w-0">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-red-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                              <FileText className="text-white w-5 h-5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-gray-900 dark:text-white truncate text-lg">
+                                {file.name}
+                              </p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                {formatFileSize(file.size)} • Position #{idx + 1}
+                              </p>
+                            </div>
+                          </div>
+                          <motion.button
+                            whileHover={{ scale: 1.1, rotate: 90 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => removeFile(idx)}
+                            className="ml-4 p-2 text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl transition-all duration-200"
+                            aria-label={`Remove ${file.name}`}
+                          >
+                            <X size={18} />
+                          </motion.button>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+
+          {/* Merge Requirements Alert */}
+          <AnimatePresence>
+            {files.length > 0 && files.length < 2 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mb-6 p-4 bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 border border-yellow-300 dark:border-yellow-700 rounded-2xl backdrop-blur-sm"
+              >
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="text-yellow-600 dark:text-yellow-400 w-5 h-5" />
+                  <p className="text-yellow-800 dark:text-yellow-200 font-medium">
+                    Add at least one more PDF to enable merging
+                  </p>
                 </div>
-              ))}
-            </div>
-          </>
-        )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Merge Button */}
+          <motion.button
+            variants={itemVariants}
+            whileHover={{ 
+              scale: files.length >= 2 && !loading ? 1.05 : 1,
+              boxShadow: files.length >= 2 && !loading ? "0 20px 40px rgba(0,0,0,0.1)" : "none"
+            }}
+            whileTap={{ scale: files.length >= 2 && !loading ? 0.98 : 1 }}
+            onClick={handleMerge}
+            disabled={files.length < 2 || loading}
+            className={`w-full font-bold py-5 rounded-3xl transition-all duration-300 text-white text-xl flex justify-center items-center gap-3 shadow-2xl ${
+              files.length < 2 || loading
+                ? 'bg-gray-400 dark:bg-gray-700 cursor-not-allowed'
+                : 'bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 hover:from-green-600 hover:via-emerald-600 hover:to-teal-600'
+            }`}
+          >
+            {loading ? (
+              <>
+                <Loader className="animate-spin" size={24} />
+                <span>Merging Your PDFs...</span>
+              </>
+            ) : (
+              <>
+                <Download size={24} />
+                <span>Merge {files.length} PDFs Into One</span>
+              </>
+            )}
+
+
+          </motion.button>
+          {/* Instructions Panel */}
+          <AnimatePresence>
+            {showInstructions && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 backdrop-blur-sm border border-blue-200 dark:border-blue-700 rounded-3xl p-6 relative overflow-hidden"
+              >
+                <motion.button
+                  whileHover={{ scale: 1.1, rotate: 90 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowInstructions(false)}
+                  className="absolute top-4 right-4 text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 p-2 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-800/30 transition-all duration-200"
+                  aria-label="Close instructions"
+                >
+                  <X size={20} />
+                {/* //here the cut option at the end for instructions */}
+                </motion.button>
+                
+                <h3 className="text-xl font-bold text-blue-800 dark:text-blue-200 mb-4 flex items-center gap-2">
+                  <FileText className="w-6 h-6" />
+                  How to Use PDF Merger
+                </h3>
+                
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-bold mt-0.5">1</div>
+                      <p className="text-blue-700 dark:text-blue-300">Click "Add PDF Files" to select multiple PDFs from your device</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-bold mt-0.5">2</div>
+                      <p className="text-blue-700 dark:text-blue-300">Add more files anytime by clicking the button again</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-bold mt-0.5">3</div>
+                      <p className="text-blue-700 dark:text-blue-300">Remove individual files using the × button if needed</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-bold mt-0.5">4</div>
+                      <p className="text-blue-700 dark:text-blue-300">Files will be merged in the exact order they appear in the list</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-bold mt-0.5">5</div>
+                      <p className="text-blue-700 dark:text-blue-300">At least 2 PDFs are required to start the merging process</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-bold mt-0.5">6</div>
+                      <p className="text-blue-700 dark:text-blue-300">Your merged PDF will be ready for download once complete</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
       </div>
 
-      {files.length > 0 && files.length < 2 && (
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-          <p className="text-sm text-yellow-700">📝 Add at least one more PDF to enable merging.</p>
-        </div>
-      )}
-
-      <button
-        onClick={handleMerge}
-        disabled={files.length < 2}
-        className={`w-full font-semibold py-3 rounded-md transition ${
-          files.length < 2 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'
-        }`}
-      >
-        {files.length < 2 ? 'Select at least 2 PDFs to merge' : `Merge ${files.length} PDFs`}
-      </button>
-
-      {showInstructions && (
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md relative">
-          <button onClick={() => setShowInstructions(false)} className="absolute top-2 right-2 text-blue-400 hover:text-blue-600 hover:bg-blue-100 p-1 rounded transition">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          <h3 className="text-sm font-semibold text-blue-800 mb-2">How to use:</h3>
-          <ul className="text-xs text-blue-700 space-y-1">
-            <li>• Click "Add PDF Files" to select multiple PDFs</li>
-            <li>• You can add more files by clicking the button again</li>
-            <li>• Remove individual files using the × button</li>
-            <li>• Files will be merged in the order they appear</li>
-            <li>• At least 2 PDFs are required for merging</li>
-          </ul>
-        </div>
-      )}
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          display:none;
+          // width: 6px;  
+        }
+        
+        `}</style>
+        {/* {*
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.1);
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: linear-gradient(to bottom, #667eea, #764ba2);
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(to bottom, #5a6fd8, #6a4190);
+      }
+     *}  */}
     </div>
   );
-}
+};
 
-export default App;
+export default PDFMerger;
