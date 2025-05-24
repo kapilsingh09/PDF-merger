@@ -151,14 +151,20 @@ This project serves as an excellent **full-stack learning experience**, covering
 
 ## 👥 Meet Our Amazing Team
 
-| Contributor | Role | Key Contributions | GitHub |
-|-------------|------|-------------------|--------|
-| **[Pankaj45-tech](https://github.com/Pankaj45-tech)** | 🎨 **Frontend Lead** | UI/UX Design, Theme System, Component Architecture, Styling Framework | [![GitHub](https://img.shields.io/badge/GitHub-000?style=flat&logo=github)](https://github.com/Pankaj45-tech) |
-
-### 🤝 **Collaboration Story**
-Our development journey had its challenges - including an accidental branch deletion incident with the `pankaj` branch. However, this setback only strengthened our collaboration! **Pankaj45-tech** has been instrumental in creating the beautiful, user-friendly interface that makes this app truly special. Their attention to detail in the frontend architecture and styling has been absolutely crucial to the project's success. 💪
+| Contributor | Role           | Key Contributions                                | GitHub                                                                                       |
+|-------------|----------------|-------------------------------------------------|----------------------------------------------------------------------------------------------|
+| **[Pankaj45-tech](https://github.com/Pankaj45-tech)** | 🎨 **Frontend Lead** | UI/UX design, theme system, component structure, and styling framework | [![GitHub](https://img.shields.io/badge/GitHub-000?style=flat&logo=github)](https://github.com/Pankaj45-tech) |
 
 ---
+
+### 🤝 Our Collaboration Story
+
+Every project has its ups and downs, and ours was no exception. During development, we had a little hiccup when the `pankaj` branch was accidentally deleted. But rather than slowing us down, it actually brought us closer as a team!
+
+**Pankaj45-tech** has been absolutely key in crafting the clean, intuitive, and user-friendly frontend that defines this app. Their keen eye for detail, creative design sense, and solid coding skills helped shape the entire user experience. We’re truly grateful for their dedication and proud to have them as our frontend lead. This project simply wouldn’t be the same without their passion and hard work! 💪
+
+---
+
 
 
 ## 📜 License & Usage
