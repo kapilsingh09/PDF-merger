@@ -167,12 +167,6 @@ Every project has its ups and downs, and ours was no exception. During developme
 
 
 
-## 📜 License & Usage
-
-This project is for educational and personal use only.  
-Not licensed for commercial distribution without permission.
-
----
 
 ## ⭐ Show Your Support
 
@@ -184,12 +178,6 @@ If this project helped you learn something new or solved a problem, we'd love yo
 - 🐛 **Report issues** or suggest features
 - 📢 **Share with others** who might find it useful
 - 💬 **Leave feedback** on your experience
-
-### 📬 **Connect With Us**
-- 💼 **LinkedIn**: Share your projects and connect
-- 🐦 **Twitter**: Follow for updates and tips
-- 📧 **Email**: Reach out for collaboration opportunities
-
 ---
 
 ## 🙏 Acknowledgments
